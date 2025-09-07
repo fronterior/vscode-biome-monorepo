@@ -1,0 +1,110 @@
+{
+	"name": "biome-monorepo",
+	"version": "0.0.1",
+	"displayName": "Biome Monorepo",
+	"publisher": "fronterior",
+	"author": {
+		"name": "fronterior",
+		"email": "lowfronterior@gmail.com"
+	},
+	"license": "MIT",
+	"description": "Toolchain of the web for monorepo",
+	"icon": "resources/icons/biome.png",
+	"categories": [
+		"Formatters",
+		"Linters"
+	],
+	"repository": "github:fronterior/vscode-biome-monorepo",
+	"homepage": "https://github.com/fronterior/vscode-biome-monorepo#readme",
+	"readme": "https://github.com/fronterior/vscode-biome-monorepo#readme",
+	"bugs": "https://github.com/fronterior/vscode-biome-monorepo/issues",
+	"scripts": {
+		"build": "rollup --config rollup.config.ts --configPlugin esbuild",
+		"dev": "rollup --watch --config rollup.config.ts --configPlugin esbuild",
+		"prepackage": "pnpm run build",
+		"package": "vsce package --out biome.vsix"
+	},
+	"main": "./out/main.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "biome.monorepo.restart",
+				"title": "Biome Monorepo: Restart"
+			}
+		],
+		"configuration": {
+			"properties": {
+				"biome-monorepo.workingDirectory": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"markdownDescription": "Override the working directories for the Biome LSP server. If specified, only these directories will be used (disables auto-detection).",
+					"scope": "resource",
+					"examples": [
+						"./packages/server",
+						"./packages/web"
+					]
+				}
+			}
+		},
+		"icons": {
+			"biome-logo": {
+				"description": "Biome logo",
+				"default": {
+					"fontPath": "resources/icons/biome.woff",
+					"fontCharacter": "\\E900"
+				}
+			}
+		},
+		"languages": [
+			{
+				"id": "biome_syntax_tree",
+				"extensions": [
+					".rast"
+				]
+			}
+		],
+		"grammars": [
+			{
+				"language": "biome_syntax_tree",
+				"scopeName": "source.biome_syntax_tree",
+				"path": "./resources/grammars/biome-syntax-tree.tmGrammar.json"
+			}
+		]
+	},
+	"engines": {
+		"vscode": "^1.80.0"
+	},
+	"vsce": {
+		"dependencies": false,
+		"skipLicense": true
+	},
+	"dependencies": {
+		"is-wsl": "3.1.0",
+		"vscode-languageclient": "9.0.1",
+		"vscode-uri": "3.1.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.0",
+		"@changesets/changelog-github": "0.5.1",
+		"@changesets/cli": "2.29.6",
+		"@rollup/plugin-commonjs": "28.0.6",
+		"@rollup/plugin-json": "6.1.0",
+		"@rollup/plugin-node-resolve": "16.0.1",
+		"@types/node": "22.17.2",
+		"@types/vscode": "^1.80.0",
+		"@vscode/vsce": "3.6.0",
+		"esbuild": "0.25.9",
+		"lefthook": "1.12.3",
+		"ovsx": "0.10.5",
+		"rollup": "4.46.3",
+		"rollup-plugin-esbuild": "6.2.1",
+		"typescript": "5.9.2"
+	},
+	"packageManager": "pnpm@10.14.0"
+}
