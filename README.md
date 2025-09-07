@@ -14,35 +14,9 @@ Therefore, this plugin will be maintained until the official plugin supports thi
 - **Yarn PnP Support**: Full support for Yarn Plug'n'Play workspaces
 - **Restart Command**: Easily restart all Biome sessions with a single command
 
-## Configuration
-
-### `biome-monorepo.workingDirectory`
-
-Override the working directory for the Biome LSP server. If not set, uses the project root directory.
-
-**Type**: `string`  
-**Default**: `""`  
-**Examples**:
-
-- `"./packages/server"`
-- `"./packages/web"`
-
-## How It Works
-
-1. **Project Discovery**: Scans for `package.json` files in the workspace
-2. **Biome Detection**: Identifies projects with `@biomejs/biome` dependencies
-3. **Binary Resolution**: Locates the appropriate Biome binary for each project
-4. **LSP Management**: Starts separate LSP servers for each Biome version/project
-5. **Session Coordination**: Manages multiple LSP sessions simultaneously
-
 ## Commands
 
 - `Biome Monorepo: Restart` - Restart all Biome LSP sessions
-
-## Known Issues
-
-- Initial setup may take a moment while detecting projects
-- Large monorepos might have longer startup times
 
 ## Contributing
 
