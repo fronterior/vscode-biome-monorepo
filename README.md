@@ -6,13 +6,25 @@ Unlike the official plugin, this extension maps Biome binaries to monorepo works
 
 Therefore, this plugin will be maintained until the official plugin supports this functionality.
 
+## Usage
+
+Open the monorepo root folder in VSCode. Add Biome-related settings to the configuration file (.vscode/settings.json) of the opened monorepo root folder. For detailed information about settings, please refer to the [official documentation](https://biomejs.dev/reference/vscode).
+
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  }
+}
+```
+
 ## Features
 
 - **Automatic Project Detection**: Automatically detects Biome projects in monorepo workspaces
 - **Per-Project Binary Management**: Each project uses its own Biome version and configuration
 - **Multiple LSP Servers**: Runs separate Language Server Protocol instances for each Biome project
-- **Yarn PnP Support**: Full support for Yarn Plug'n'Play workspaces
-- **Restart Command**: Easily restart all Biome sessions with a single command
 
 ## Commands
 
@@ -24,7 +36,7 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## Plans
 
-- Enhanced Yarn PnP support
+- Yarn PnP support
 - Windows binary temporary file optimization
 
 ## Acknowledgments
