@@ -1,32 +1,32 @@
-import { commands, type ExtensionContext, Uri, workspace } from "vscode";
-import Logger from "./Logger";
-import { Session } from "./Session";
+import { commands, type ExtensionContext, Uri, workspace } from 'vscode';
+import Logger from './Logger';
+import { Session } from './Session';
 import {
 	findBiomeBinaryUri,
 	findBiomePackagesByProject,
 	findBiomeProjects,
 	getVersion,
-} from "./utils";
+} from './utils';
 
 export class Extension {
 	static instance: Extension;
 
 	static getInstance(context?: ExtensionContext) {
 		if (!context) {
-			throw new Error("Extension context is required");
+			throw new Error('Extension context is required');
 		}
 		Extension.instance ??= new Extension(context);
 
 		return Extension.instance;
 	}
 
-	private logger = new Logger("Biome Monorepo");
+	private logger = new Logger('Biome Monorepo');
 
 	private sessions: Session[] = [];
 
 	constructor(public context: ExtensionContext) {
 		if (workspace.workspaceFolders === undefined) {
-			this.logger.error("No workspace folder found.");
+			this.logger.error('No workspace folder found.');
 			return;
 		}
 	}
@@ -50,14 +50,16 @@ export class Extension {
 
 	private async createWorkspaceInstances(): Promise<void> {
 		const projectUris = await workspace.findFiles(
-			"**/package.json",
-			"**/node_modules/**",
+			'**/package.json',
+			'**/node_modules/**',
 		);
 		this.logger.info(`🔍 Found ${projectUris.length} project folder(s).`);
 
 		const biomeProjects = await findBiomeProjects(projectUris);
 		this.logger.info(
-			`🔍 Found ${biomeProjects.length} biome project folder(s). ${biomeProjects.map(({ fsPath }) => fsPath).join(", ")}`,
+			`🔍 Found ${biomeProjects.length} biome project folder(s). ${biomeProjects
+				.map(({ fsPath }) => fsPath)
+				.join(', ')}`,
 		);
 
 		// Maps Biome package paths to their associated project paths
@@ -100,7 +102,7 @@ export class Extension {
 
 	private registerCommands(): void {
 		const restartCommand = commands.registerCommand(
-			"biome.monorepo.restart",
+			'biome.monorepo.restart',
 			async () => {
 				await this.stop();
 				await this.start();

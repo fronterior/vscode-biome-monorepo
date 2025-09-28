@@ -1,5 +1,5 @@
-import * as path from "node:path";
-import { Uri, window } from "vscode";
+import * as path from 'node:path';
+import { Uri, window } from 'vscode';
 import {
 	type DocumentFilter,
 	type InitializeParams,
@@ -7,10 +7,10 @@ import {
 	type LanguageClientOptions,
 	type ServerOptions,
 	TransportKind,
-} from "vscode-languageclient/node";
-import { displayName } from "../package.json";
-import { supportedLanguages } from "./constants";
-import Logger from "./Logger";
+} from 'vscode-languageclient/node';
+import { displayName } from '../package.json';
+import { supportedLanguages } from './constants';
+import Logger from './Logger';
 
 export class Session {
 	/**
@@ -22,7 +22,7 @@ export class Session {
 		return this.client?.initializeResult?.serverInfo?.version;
 	}
 
-	logger = new Logger("Biome Monorepo");
+	logger = new Logger('Biome Monorepo');
 
 	/**
 	 * Creates a new LSP session
@@ -45,11 +45,11 @@ export class Session {
 	 * Stops the LSP session.
 	 */
 	public async stop() {
-		this.logger.debug("Stopping LSP session");
+		this.logger.debug('Stopping LSP session');
 
 		await this.client?.stop();
 
-		this.logger.debug("LSP session stopped");
+		this.logger.debug('LSP session stopped');
 
 		this.client = undefined;
 	}
@@ -63,7 +63,7 @@ export class Session {
 		const serverOptions: ServerOptions = {
 			command: this.bin.fsPath,
 			transport: TransportKind.stdio,
-			args: ["lsp-proxy"],
+			args: ['lsp-proxy'],
 		};
 
 		const outputChannel = window.createOutputChannel(
@@ -79,8 +79,8 @@ export class Session {
 		};
 
 		return new BiomeMonorepoLanguageClient(
-			"biome-monorepo.lsp",
-			"biome-monorepo",
+			'biome-monorepo.lsp',
+			'biome-monorepo',
 			serverOptions,
 			clientOptions,
 			this.folders,
@@ -94,8 +94,8 @@ export class Session {
 		return supportedLanguages.flatMap((language) =>
 			folders.map((folder) => ({
 				language,
-				scheme: "file",
-				pattern: Uri.joinPath(folder, "**", "*").fsPath.replaceAll("\\", "/"),
+				scheme: 'file',
+				pattern: Uri.joinPath(folder, '**', '*').fsPath.replaceAll('\\', '/'),
 			})),
 		);
 	}

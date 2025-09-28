@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
-import isWSL from "is-wsl";
+import { spawnSync } from 'node:child_process';
+import isWSL from 'is-wsl';
 
 /**
  * Identifiers of the languages supported by the extension
@@ -9,21 +9,21 @@ import isWSL from "is-wsl";
  * taking a given file into account or not.
  */
 export const supportedLanguages: string[] = [
-	"astro",
-	"css",
-	"graphql",
-	"grit",
-	"html",
-	"javascript",
-	"javascriptreact",
-	"json",
-	"jsonc",
-	"snippets",
-	"svelte",
-	"tailwindcss",
-	"typescript",
-	"typescriptreact",
-	"vue",
+	'astro',
+	'css',
+	'graphql',
+	'grit',
+	'html',
+	'javascript',
+	'javascriptreact',
+	'json',
+	'jsonc',
+	'snippets',
+	'svelte',
+	'tailwindcss',
+	'typescript',
+	'typescriptreact',
+	'vue',
 ];
 
 /**
@@ -31,13 +31,13 @@ export const supportedLanguages: string[] = [
  */
 export const isMusl = (() => {
 	// If not on Linux, or on WSL we can't be using musl
-	if (process.platform !== "linux" || isWSL) {
+	if (process.platform !== 'linux' || isWSL) {
 		return false;
 	}
 
 	try {
-		const output = spawnSync("ldd", ["--version"], { encoding: "utf8" });
-		return output.stdout.includes("musl");
+		const output = spawnSync('ldd', ['--version'], { encoding: 'utf8' });
+		return output.stdout.includes('musl');
 	} catch {
 		return false;
 	}
@@ -54,10 +54,10 @@ export const isMusl = (() => {
  * @example "win32-x64"
  */
 export const platformIdentifier = (() => {
-	let flavor = "";
+	let flavor = '';
 
 	if (isMusl) {
-		flavor = "-musl";
+		flavor = '-musl';
 	}
 
 	return `${process.platform}-${process.arch}${flavor}`;
@@ -72,7 +72,7 @@ export const platformIdentifier = (() => {
  * @example "biome" (on Linux, macOS, and other Unix-like systems)
  * @example "biome.exe" (on Windows)
  */
-export const platformSpecificBinaryName = `biome${process.platform === "win32" ? ".exe" : ""}`;
+export const platformSpecificBinaryName = `biome${process.platform === 'win32' ? '.exe' : ''}`;
 
 /**
  * Platform-specific package name

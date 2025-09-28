@@ -1,10 +1,10 @@
-import { createRequire } from "node:module";
-import { FileType, Uri, type WorkspaceFolder, workspace } from "vscode";
-import { Utils } from "vscode-uri";
+import { createRequire } from 'node:module';
+import { FileType, Uri, type WorkspaceFolder, workspace } from 'vscode';
+import { Utils } from 'vscode-uri';
 import {
 	platformSpecificBinaryName,
 	platformSpecificNodePackageName,
-} from "./constants";
+} from './constants';
 
 /**
  * Checks whether a file exists
@@ -46,9 +46,9 @@ export const findBiomeProjects = async (uris: Uri[]) => {
 			const { dependencies, devDependencies, peerDependencies } =
 				JSON.parse(packageJsonString);
 			if (
-				(dependencies && "@biomejs/biome" in dependencies) ||
-				(devDependencies && "@biomejs/biome" in devDependencies) ||
-				(peerDependencies && "@biomejs/biome" in peerDependencies)
+				(dependencies && '@biomejs/biome' in dependencies) ||
+				(devDependencies && '@biomejs/biome' in devDependencies) ||
+				(peerDependencies && '@biomejs/biome' in peerDependencies)
 			) {
 				result.push(uri);
 			}
@@ -113,7 +113,7 @@ export const findBiomePackagesByProject = (uris: Uri[]) => {
 
 		try {
 			const biomePackagePath = projectRequire.resolve(
-				"@biomejs/biome/package.json",
+				'@biomejs/biome/package.json',
 			);
 
 			result[biomePackagePath] = [
@@ -134,9 +134,9 @@ export const getVersion = async (uri: Uri) => {
 		const projectRequire = createRequire(uri.fsPath);
 		const packageJson = projectRequire(uri.fsPath);
 
-		return packageJson.version ?? "unknown";
+		return packageJson.version ?? 'unknown';
 	} catch {
-		return "unknown";
+		return 'unknown';
 	}
 };
 
@@ -146,8 +146,8 @@ export const findPnpFileInPath = async (uri: Uri) => {
 
 	while (current.fsPath !== parent.fsPath) {
 		if (
-			(await fileExists(Uri.joinPath(current, ".pnp.cjs"))) ||
-			(await fileExists(Uri.joinPath(current, ".pnp.js")))
+			(await fileExists(Uri.joinPath(current, '.pnp.cjs'))) ||
+			(await fileExists(Uri.joinPath(current, '.pnp.js')))
 		) {
 			return current;
 		}

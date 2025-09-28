@@ -1,5 +1,5 @@
-import type { ExtensionContext } from "vscode";
-import { Extension } from "./Extension";
+import type { ExtensionContext } from 'vscode';
+import { Extension } from './Extension';
 
 export const activate = async (context: ExtensionContext) => {
 	await Extension.getInstance(context).init();

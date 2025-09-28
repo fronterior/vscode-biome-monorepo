@@ -1,4 +1,4 @@
-import { type LogOutputChannel, window } from "vscode";
+import { type LogOutputChannel, window } from 'vscode';
 
 export default class Logger {
 	/**
@@ -34,7 +34,7 @@ export default class Logger {
 	 * @param message The error message to log.
 	 */
 	public error(message?: string): void {
-		this.outputChannel.error(message ?? "");
+		this.outputChannel.error(message ?? '');
 	}
 
 	/**
@@ -43,7 +43,7 @@ export default class Logger {
 	 * @param message The warning message to log.
 	 */
 	public warn(message?: string): void {
-		this.outputChannel.warn(message ?? "");
+		this.outputChannel.warn(message ?? '');
 	}
 
 	/**
@@ -52,7 +52,7 @@ export default class Logger {
 	 * @param message The debug message to log.
 	 */
 	public debug(message?: string): void {
-		this.outputChannel.debug(message ?? "");
+		this.outputChannel.debug(message ?? '');
 	}
 
 	/**
@@ -61,6 +61,6 @@ export default class Logger {
 	 * @param message The verbose message to log.
 	 */
 	public trace(message?: string): void {
-		this.outputChannel.trace(message ?? "");
+		this.outputChannel.trace(message ?? '');
 	}
 }
