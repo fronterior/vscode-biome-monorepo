@@ -132,6 +132,9 @@ export class Extension {
 			commands.registerCommand('biome.monorepo.restart', () => {
 				this.restart();
 			}),
+			commands.registerCommand('eslint.showOutputChannel', () => {
+				this.logger.show();
+			}),
 		];
 
 		const workspaceListeners = [

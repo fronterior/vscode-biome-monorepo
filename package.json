@@ -22,7 +22,8 @@
 		"build": "rollup --config rollup.config.ts --configPlugin esbuild",
 		"dev": "rollup --watch --config rollup.config.ts --configPlugin esbuild",
 		"prepackage": "pnpm run build",
-		"package": "vsce package --out biome.vsix"
+		"package": "vsce package --out biome.vsix",
+		"changeset": "changeset"
 	},
 	"main": "./out/main.js",
 	"activationEvents": [
@@ -32,7 +33,13 @@
 		"commands": [
 			{
 				"command": "biome.monorepo.restart",
+				"category": "Biome Monrepo",
 				"title": "Biome Monorepo: Restart"
+			},
+			{
+				"title": "Show Output Channel",
+				"category": "Biome Monrepo",
+				"command": "eslint.showOutputChannel"
 			}
 		],
 		"configuration": {
