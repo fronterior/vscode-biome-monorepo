@@ -1,6 +1,8 @@
+import * as path from "node:path";
 import { Uri, window } from "vscode";
 import {
 	type DocumentFilter,
+	type InitializeParams,
 	LanguageClient,
 	type LanguageClientOptions,
 	type ServerOptions,
@@ -70,24 +72,21 @@ export class Session {
 				log: true,
 			},
 		);
-
 		const clientOptions: LanguageClientOptions = {
 			outputChannel: outputChannel,
 			traceOutputChannel: outputChannel,
 			documentSelector: this.createDocumentSelector(),
 		};
 
-		return new LanguageClient(
+		return new BiomeMonorepoLanguageClient(
 			"biome-monorepo.lsp",
 			"biome-monorepo",
 			serverOptions,
 			clientOptions,
+			this.folders,
 		);
 	}
 
-	/**
-	 * Creates the document selector for the language client.
-	 */
 	private createDocumentSelector(): DocumentFilter[] {
 		const folders = this.folders;
 		this.logger.info(`folders ${folders.map((folder) => folder.fsPath)}`);
@@ -99,5 +98,36 @@ export class Session {
 				pattern: Uri.joinPath(folder, "**", "*").fsPath.replaceAll("\\", "/"),
 			})),
 		);
+	}
+}
+
+class BiomeMonorepoLanguageClient extends LanguageClient {
+	constructor(
+		id: string,
+		name: string,
+		serverOptions: ServerOptions,
+		clientOptions: LanguageClientOptions,
+		private biomeWorkspaceFolders: Uri[],
+	) {
+		super(id, name, serverOptions, clientOptions);
+	}
+
+	/**
+	 * The Biome LSP proxy server searches for biome.json files
+	 * in the workspaceFolders paths provided by VSCode during server initialization.
+	 * If only the monorepo root folder is open in VSCode, it skips searching for
+	 * biome.json in subdirectories and uses the root configuration instead.
+	 * To prevent this, this implementation overrides VSCode's workspaceFolders with paths to
+	 * projects that have Biome installed, ensuring each folder's biome.json is used.
+	 */
+	protected fillInitializeParams(params: InitializeParams): void {
+		params.workspaceFolders = this.biomeWorkspaceFolders.map((folder) => ({
+			uri: folder.toString(),
+			name: path.basename(folder.fsPath),
+		}));
+
+		super.fillInitializeParams({
+			...params,
+		});
 	}
 }
