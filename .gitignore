@@ -4,3 +4,4 @@ out
 .vsix
 .tool-versions
 .DS_Store
+.vscode
