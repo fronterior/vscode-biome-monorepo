@@ -1,6 +1,6 @@
 {
 	"name": "biome-monorepo",
-	"version": "0.0.3",
+	"version": "0.1.0",
 	"displayName": "Biome Monorepo",
 	"publisher": "fronterior",
 	"author": {
@@ -31,8 +31,14 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "biome.monorepo.restart",
+				"command": "biome-monorepo.restart",
+				"category": "Biome Monorepo",
 				"title": "Biome Monorepo: Restart"
+			},
+			{
+				"title": "Show Output Channel",
+				"category": "Biome Monorepo",
+				"command": "biome-monorepo.showOutputChannel"
 			}
 		],
 		"configuration": {
@@ -86,7 +92,7 @@
 	},
 	"dependencies": {
 		"is-wsl": "3.1.0",
-		"vscode-languageclient": "9.0.1",
+		"vscode-languageclient": "10.0.0-next.16",
 		"vscode-uri": "3.1.0"
 	},
 	"devDependencies": {
@@ -104,7 +110,9 @@
 		"ovsx": "0.10.5",
 		"rollup": "4.46.3",
 		"rollup-plugin-esbuild": "6.2.1",
-		"typescript": "5.9.2"
+		"typescript": "5.9.2",
+		"vscode-languageserver": "10.0.0-next.13",
+		"vscode-languageserver-textdocument": "1.0.12"
 	},
 	"packageManager": "pnpm@10.14.0",
 	"preview": true

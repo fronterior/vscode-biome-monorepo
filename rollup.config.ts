@@ -6,7 +6,7 @@ import esbuild from "rollup-plugin-esbuild";
 
 export default defineConfig([
 	{
-		input: "src/main.ts",
+		input: "client/main.ts",
 		output: {
 			dir: "out",
 			format: "cjs",
@@ -21,6 +21,6 @@ export default defineConfig([
 				sourceMap: true,
 			}),
 		],
-		external: ["vscode", "node:events"],
+		external: ["vscode", "node:events", "vscode-languageclient/node"],
 	},
 ]);
