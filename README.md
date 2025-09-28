@@ -46,7 +46,7 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 ## Plans
 
 - [x] Connect appropriate biome.json per file
-- [ ] Automatic plugin restart when needed
+- [x] Automatic plugin restart when needed
 - [ ] Windows binary temporary file optimization
 - [ ] Yarn PnP support
 
