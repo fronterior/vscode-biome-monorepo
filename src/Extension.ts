@@ -42,6 +42,7 @@ export class Extension {
 	}
 
 	async stop() {
+		this.logger.info('Stopping extension...');
 		this.context.subscriptions.forEach((subscription) => {
 			subscription.dispose();
 		});
@@ -61,17 +62,29 @@ export class Extension {
 			'**/package.json',
 			'**/node_modules/**',
 		);
-		this.logger.info(`🔍 Found ${projectUris.length} project folder(s).`);
+		this.logger.info(
+			`🔍 Found ${projectUris.length} project folder(s) in workspaces.`,
+		);
 
 		const biomeProjects = await findBiomeProjects(projectUris);
+		if (!biomeProjects.length) {
+			this.logger.warn('No biome project found.');
+
+			return;
+		}
+
 		this.logger.info(
-			`🔍 Found ${biomeProjects.length} biome project folder(s). ${biomeProjects
-				.map(({ fsPath }) => fsPath)
-				.join(', ')}`,
+			`🔍 Found ${biomeProjects.length} biome project folder(s). `,
 		);
 
 		// Maps Biome package paths to their associated project paths
 		const biomePackages = findBiomePackagesByProject(biomeProjects);
+		if (!Object.keys(biomePackages).length) {
+			this.logger.warn(
+				'No biome package found in node_modules. Please install it.',
+			);
+			return;
+		}
 
 		const biomeVersionsEntries = await Promise.all(
 			Object.keys(biomePackages).map(async (biomePackage) => {
@@ -86,6 +99,12 @@ export class Extension {
 		const biomeBinaryUris = await Promise.all(
 			Object.keys(biomePackages).map(async (biomePackage) => {
 				const binary = await findBiomeBinaryUri(Uri.file(biomePackage));
+				if (!binary) {
+					// The @biomejs/biome package has a dependency on the @biomejs/cli-* package, so this should not be reached unless manually deleted.
+					this.logger.warn(
+						`No binary found for ${biomePackage}. It appears that node_modules is not properly installed. Please reinstall it.`,
+					);
+				}
 
 				return [biomePackage, binary] as const;
 			}),
