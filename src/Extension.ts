@@ -129,10 +129,10 @@ export class Extension {
 
 	private async registerListeners() {
 		const commandListeners = [
-			commands.registerCommand('biome.monorepo.restart', () => {
+			commands.registerCommand('biome-monorepo.restart', () => {
 				this.restart();
 			}),
-			commands.registerCommand('eslint.showOutputChannel', () => {
+			commands.registerCommand('biome-monorepo.showOutputChannel', () => {
 				this.logger.show();
 			}),
 		];

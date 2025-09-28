@@ -32,14 +32,14 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "biome.monorepo.restart",
 				"category": "Biome Monrepo",
-				"title": "Biome Monorepo: Restart"
+				"command": "biome-monorepo.restart",
+				"title": "Restart"
 			},
 			{
-				"title": "Show Output Channel",
 				"category": "Biome Monrepo",
-				"command": "eslint.showOutputChannel"
+				"command": "biome-monorepo.showOutputChannel",
+				"title": "Show Output Channel"
 			}
 		],
 		"configuration": {

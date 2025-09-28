@@ -38,6 +38,7 @@ The Biome LSP proxy server searches for biome.json files in the workspaceFolders
 ## Commands
 
 - `Biome Monorepo: Restart` - Restart all Biome LSP sessions
+- `Biome Monorepo: Show Output Channel` - Show the Biome Monorepo output channel
 
 ## Contributing
 
