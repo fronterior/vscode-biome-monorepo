@@ -31,21 +31,29 @@ export class Extension {
 		}
 	}
 
-	async init() {
-		this.registerCommands();
+	async start() {
+		this.logger.info('Starting extension...');
+
+		await this.registerListeners();
 
 		await this.createWorkspaceInstances();
-		this.start();
-	}
 
-	async start() {
-		await Promise.all(this.sessions.map((biome) => biome.start()));
+		await Promise.all(this.sessions.map((session) => session.start()));
 	}
 
 	async stop() {
-		this.sessions.forEach((biome) => {
-			biome.stop();
+		this.context.subscriptions.forEach((subscription) => {
+			subscription.dispose();
 		});
+		this.context.subscriptions.splice(0);
+
+		await Promise.all(this.sessions.map((session) => session.stop()));
+	}
+
+	async restart() {
+		this.logger.info('Restarting extension...');
+		await this.stop();
+		await this.start();
 	}
 
 	private async createWorkspaceInstances(): Promise<void> {
@@ -100,15 +108,36 @@ export class Extension {
 			.filter(Boolean) as Session[];
 	}
 
-	private registerCommands(): void {
-		const restartCommand = commands.registerCommand(
-			'biome.monorepo.restart',
-			async () => {
-				await this.stop();
-				await this.start();
-			},
+	private async registerListeners() {
+		const commandListeners = [
+			commands.registerCommand('biome.monorepo.restart', () => {
+				this.restart();
+			}),
+		];
+
+		const workspaceListeners = [
+			workspace.onDidChangeWorkspaceFolders(() => {
+				this.restart();
+			}),
+		];
+
+		const lockFileNames = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
+
+		const lockFiles = await workspace.findFiles(
+			`**/{${lockFileNames.join(',')}}`,
 		);
 
-		this.context.subscriptions.push(restartCommand);
+		const lockFileListeners = lockFiles.map((pattern) => {
+			const watcher = workspace.createFileSystemWatcher(pattern.fsPath);
+			watcher.onDidChange(() => this.restart());
+
+			return watcher;
+		});
+
+		this.context.subscriptions.push(
+			...commandListeners,
+			...workspaceListeners,
+			...lockFileListeners,
+		);
 	}
 }
