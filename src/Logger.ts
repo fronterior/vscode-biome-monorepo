@@ -1,6 +1,6 @@
 import { type LogOutputChannel, window } from 'vscode';
 
-export default class Logger {
+export class Logger {
 	/**
 	 * The output channel for logging messages.
 	 */

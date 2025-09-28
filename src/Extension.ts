@@ -1,5 +1,5 @@
 import { commands, type ExtensionContext, Uri, workspace } from 'vscode';
-import Logger from './Logger';
+import { Logger } from './Logger';
 import { Session } from './Session';
 import {
 	findBiomeBinaryUri,

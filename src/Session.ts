@@ -10,7 +10,7 @@ import {
 } from 'vscode-languageclient/node';
 import { displayName } from '../package.json';
 import { supportedLanguages } from './constants';
-import Logger from './Logger';
+import { Logger } from './Logger';
 
 export class Session {
 	/**
@@ -88,11 +88,8 @@ export class Session {
 	}
 
 	private createDocumentSelector(): DocumentFilter[] {
-		const folders = this.folders;
-		this.logger.info(`folders ${folders.map((folder) => folder.fsPath)}`);
-
 		return supportedLanguages.flatMap((language) =>
-			folders.map((folder) => ({
+			this.folders.map((folder) => ({
 				language,
 				scheme: 'file',
 				pattern: Uri.joinPath(folder, '**', '*').fsPath.replaceAll('\\', '/'),
