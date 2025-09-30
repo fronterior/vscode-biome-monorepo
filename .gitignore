@@ -1,7 +1,7 @@
 dist
 node_modules
 out
-.vsix
+*.vsix
 .tool-versions
 .DS_Store
 .vscode
