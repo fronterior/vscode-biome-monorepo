@@ -135,6 +135,12 @@ export class Extension {
 			commands.registerCommand('biome-monorepo.showOutputChannel', () => {
 				this.logger.show();
 			}),
+			commands.registerCommand('biome-monorepo.executeAutofix', () => {
+				commands.executeCommand('editor.action.sourceAction', {
+					kind: 'source.fixAll.biome',
+					apply: 'first',
+				});
+			}),
 		];
 
 		const workspaceListeners = [

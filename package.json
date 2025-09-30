@@ -33,6 +33,11 @@
 		"commands": [
 			{
 				"category": "Biome Monrepo",
+				"command": "biome-monorepo.executeAutofix",
+				"title": "Fix all auto-fixable Problems"
+			},
+			{
+				"category": "Biome Monrepo",
 				"command": "biome-monorepo.restart",
 				"title": "Restart"
 			},
