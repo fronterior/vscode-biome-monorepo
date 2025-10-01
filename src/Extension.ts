@@ -1,6 +1,7 @@
 import { commands, type ExtensionContext, Uri, workspace } from 'vscode';
 import { Logger } from './Logger';
 import { Session } from './Session';
+import { StatusBar } from './StatusBar';
 import {
 	findBiomeBinaryUri,
 	findBiomePackagesByProject,
@@ -24,6 +25,8 @@ export class Extension {
 
 	private sessions: Session[] = [];
 
+	private statusBar = new StatusBar();
+
 	constructor(public context: ExtensionContext) {
 		if (workspace.workspaceFolders === undefined) {
 			this.logger.error('No workspace folder found.');
@@ -33,12 +36,19 @@ export class Extension {
 
 	async start() {
 		this.logger.info('Starting extension...');
+		this.statusBar.start();
+		this.statusBar.print({
+			text: '$(loading~spin)',
+			tooltip: 'Loading Biome Monorepo',
+		});
 
 		await this.registerListeners();
 
 		await this.createWorkspaceInstances();
 
 		await Promise.all(this.sessions.map((session) => session.start()));
+
+		this.statusBar.reset();
 	}
 
 	async stop() {
@@ -49,6 +59,8 @@ export class Extension {
 		this.context.subscriptions.splice(0);
 
 		await Promise.all(this.sessions.map((session) => session.stop()));
+
+		this.statusBar.stop();
 	}
 
 	async restart() {
