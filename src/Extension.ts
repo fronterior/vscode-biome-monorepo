@@ -43,12 +43,12 @@ export class Extension {
 		});
 
 		await this.registerListeners();
-
 		await this.createWorkspaceInstances();
 
 		await Promise.all(this.sessions.map((session) => session.start()));
 
 		this.statusBar.reset();
+		this.logger.info('🚀 Extension started.');
 	}
 
 	async stop() {
@@ -61,6 +61,7 @@ export class Extension {
 		await Promise.all(this.sessions.map((session) => session.stop()));
 
 		this.statusBar.stop();
+		this.logger.info('🛑 Extension stopped.');
 	}
 
 	async restart() {
@@ -70,25 +71,29 @@ export class Extension {
 	}
 
 	private async createWorkspaceInstances(): Promise<void> {
+		this.logger.time('find all package.json');
 		const projectUris = await workspace.findFiles(
 			'**/package.json',
 			'**/node_modules/**',
 		);
+		this.logger.timeEnd('find all package.json');
 		this.logger.info(
 			`🔍 Found ${projectUris.length} project folder(s) in workspaces.`,
 		);
 
+		this.logger.time('find all biome projects');
 		const biomeProjects = await findBiomeProjects(projectUris);
 		if (!biomeProjects.length) {
 			this.logger.warn('No biome project found.');
 
 			return;
 		}
-
+		this.logger.timeEnd('find all biome projects');
 		this.logger.info(
 			`🔍 Found ${biomeProjects.length} biome project folder(s). `,
 		);
 
+		this.logger.time('find all biome binary');
 		// Maps Biome package paths to their associated project paths
 		const biomePackages = findBiomePackagesByProject(biomeProjects);
 		if (!Object.keys(biomePackages).length) {
@@ -123,6 +128,7 @@ export class Extension {
 		);
 
 		const biomeBinaryMap = Object.fromEntries(biomeBinaryUris);
+		this.logger.timeEnd('find all biome binary');
 
 		// Flatten Biome instances
 		this.sessions = Object.keys(biomePackages)

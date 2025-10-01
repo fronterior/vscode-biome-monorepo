@@ -6,6 +6,8 @@ export class Logger {
 	 */
 	private outputChannel: LogOutputChannel;
 
+	private timers = new Map<string, number>();
+
 	/**
 	 * Creates a new logger for the given Biome instance
 	 */
@@ -62,5 +64,27 @@ export class Logger {
 	 */
 	public trace(message?: string): void {
 		this.outputChannel.trace(message ?? '');
+	}
+
+	public time(label: string): void {
+		if (this.timers.has(label)) {
+			this.error(`Timer ${label} already exists`);
+
+			return;
+		}
+
+		this.timers.set(label, performance.now());
+	}
+
+	public timeEnd(label: string, fixed: number = 2): void {
+		if (!this.timers.has(label)) {
+			this.error(`Timer ${label} does not exist`);
+
+			return;
+		}
+
+		const duration = performance.now() - (this.timers.get(label) ?? 0);
+		this.info(`⏲ ${label}: ${duration.toFixed(fixed)}ms`);
+		this.timers.delete(label);
 	}
 }
