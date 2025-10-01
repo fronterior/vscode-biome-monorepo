@@ -90,10 +90,10 @@ export class Extension {
 		}
 		this.logger.timeEnd('find all biome projects');
 		this.logger.info(
-			`🔍 Found ${biomeProjects.length} biome project folder(s). `,
+			`🔍 Found ${biomeProjects.length} biome project folder(s).`,
 		);
 
-		this.logger.time('find all biome binary');
+		this.logger.time('find biome binaries');
 		// Maps Biome package paths to their associated project paths
 		const biomePackages = findBiomePackagesByProject(biomeProjects);
 		if (!Object.keys(biomePackages).length) {
@@ -128,7 +128,7 @@ export class Extension {
 		);
 
 		const biomeBinaryMap = Object.fromEntries(biomeBinaryUris);
-		this.logger.timeEnd('find all biome binary');
+		this.logger.timeEnd('find biome binaries');
 
 		// Flatten Biome instances
 		this.sessions = Object.keys(biomePackages)
