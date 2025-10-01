@@ -11,6 +11,7 @@ Therefore, this plugin will be maintained until the official plugin supports thi
 1. If the official Biome plugin is installed, it should be disabled before using this plugin as there may be conflicts.
 2. Open the monorepo root folder or the parent folder of multiple projects in VSCode.
 3. Add Biome-related settings to the configuration file (.vscode/settings.json) of the opened monorepo root folder. For detailed information about settings, please refer to the [official documentation](https://biomejs.dev/reference/vscode).
+4. If you modify any biome.json file, please restart the plugin.
 
 ```json
 {
@@ -27,7 +28,9 @@ Therefore, this plugin will be maintained until the official plugin supports thi
 
 ## How It Works
 
-The Biome LSP proxy server searches for biome.json files in the workspaceFolders paths provided by VSCode during server initialization. Therefore, if only the monorepo root folder is open in VSCode, it skips searching for biome.json in subdirectories and uses the root configuration instead. To prevent this, this plugin overrides VSCode's workspaceFolders with paths to projects that have Biome installed, ensuring each folder's biome.json is used.
+- The Biome LSP proxy server searches for biome.json files in the workspaceFolders paths provided by VSCode during server initialization.
+- Therefore, if only the monorepo root folder is open in VSCode, it skips searching for biome.json in subdirectories and uses the root configuration instead.
+- To prevent this, this plugin overrides VSCode's workspaceFolders with paths to projects that have Biome installed, ensuring each folder's biome.json is used.
 
 ## Features
 
@@ -39,6 +42,7 @@ The Biome LSP proxy server searches for biome.json files in the workspaceFolders
 
 - `Biome Monorepo: Restart` - Restart all Biome LSP sessions
 - `Biome Monorepo: Show Output Channel` - Show the Biome Monorepo output channel
+- `Biome Monorepo: Fix all auto-fixable Problems` - Fix all auto-fixable Problems in focused file
 
 ## Contributing
 
