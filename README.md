@@ -6,6 +6,10 @@ Unlike the official plugin, this extension maps Biome binaries to monorepo works
 
 Therefore, this plugin will be maintained until the official plugin supports this functionality.
 
+## Prerequisites
+
+This plugin discovers projects based on package.json files across VSCode workspaces. Before using it, add @biomejs/biome as a dependency in your project's package.json and install the package using your package manager.
+
 ## Usage
 
 1. If the official Biome plugin is installed, it should be disabled before using this plugin as there may be conflicts.
@@ -31,6 +35,14 @@ Therefore, this plugin will be maintained until the official plugin supports thi
 - The Biome LSP proxy server searches for biome.json files in the workspaceFolders paths provided by VSCode during server initialization.
 - Therefore, if only the monorepo root folder is open in VSCode, it skips searching for biome.json in subdirectories and uses the root configuration instead.
 - To prevent this, this plugin overrides VSCode's workspaceFolders with paths to projects that have Biome installed, ensuring each folder's biome.json is used.
+
+## ⚠️ Differences from the Official Plugin
+
+This plugin is currently tailored to specific personal use cases. To clarify terminology: "VSCode workspace" refers to folders opened in VSCode, while "sub-project" or "project" refers to package manager workspaces (npm, yarn, pnpm, etc.). Here are the key behavioral differences from the official plugin:
+
+- Searches for package.json files across all open VSCode workspaces and connects only sub-paths of projects using `@biomejs/biome` to the Biome LSP. This means the extension won't work if packages aren't installed.
+- Only performs diagnostics on files within sub-projects that use Biome in the monorepo. To enable Biome diagnostics across all projects, ensure the VSCode workspace root has a package.json with `@biomejs/biome` installed.
+- Unsaved new files won't be formatted until they're saved within a project that uses Biome.
 
 ## Features
 
