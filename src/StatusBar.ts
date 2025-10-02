@@ -14,14 +14,14 @@ export class StatusBar {
 	print(options: Partial<Pick<StatusBarItem, 'text' | 'tooltip' | 'command'>>) {
 		Object.assign(this.statusBarItem, options);
 		this.statusBarItem.name = 'Biome Monorepo';
-		this.statusBarItem.command = 'biome-monorepo.showOutputChannel';
+		this.statusBarItem.command = 'biome-monorepo.showCommands';
 	}
 
 	reset() {
 		this.print({
 			text: '$(biome-logo)',
 			tooltip: 'Biome Monorepo',
-			command: 'biome-monorepo.showOutputChannel',
+			command: 'biome-monorepo.showCommands',
 		});
 	}
 

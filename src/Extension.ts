@@ -1,4 +1,10 @@
-import { commands, type ExtensionContext, Uri, workspace } from 'vscode';
+import {
+	commands,
+	type ExtensionContext,
+	Uri,
+	window,
+	workspace,
+} from 'vscode';
 import { Logger } from './Logger';
 import { Session } from './Session';
 import { StatusBar } from './StatusBar';
@@ -158,6 +164,30 @@ export class Extension {
 					kind: 'source.fixAll.biome',
 					apply: 'first',
 				});
+			}),
+			commands.registerCommand('biome-monorepo.showCommands', async () => {
+				const items = [
+					{
+						label: '$(wrench) Fix all auto-fixable Problems',
+						command: 'biome-monorepo.executeAutofix',
+					},
+					{
+						label: '$(refresh) Restart',
+						command: 'biome-monorepo.restart',
+					},
+					{
+						label: '$(output) Show Output Channel',
+						command: 'biome-monorepo.showOutputChannel',
+					},
+				];
+
+				const selected = await window.showQuickPick(items, {
+					placeHolder: 'Select a Biome Monorepo command',
+				});
+
+				if (selected) {
+					commands.executeCommand(selected.command);
+				}
 			}),
 		];
 
