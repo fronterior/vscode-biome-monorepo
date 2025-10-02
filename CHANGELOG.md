@@ -1,5 +1,15 @@
 # biome-monorepo
 
+## 0.0.6
+
+### Patch Changes
+
+- [`feedef1`](https://github.com/fronterior/vscode-biome-monorepo/commit/feedef1c3d59399387935a84e493e91fcb00f974) Thanks [@fronterior](https://github.com/fronterior)! - Add "Fix all auto-fixable Problems" command
+
+- [`5e51731`](https://github.com/fronterior/vscode-biome-monorepo/commit/5e51731015383d7eaf94fc420e5f6a0ab930262a) Thanks [@fronterior](https://github.com/fronterior)! - add command picker to status bar
+
+- [`6131995`](https://github.com/fronterior/vscode-biome-monorepo/commit/61319952fa7e1ab18297aabcc04c84a5d54567c1) Thanks [@fronterior](https://github.com/fronterior)! - add status bar icon
+
 ## 0.0.5
 
 ### Patch Changes
