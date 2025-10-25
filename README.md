@@ -114,6 +114,7 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 - [x] Connect appropriate biome.json per file
 - [x] Automatic plugin restart when needed
+- [ ] Replace full scan with on-demand detection
 - [ ] Windows binary temporary file optimization
 - [ ] Yarn PnP support
 
