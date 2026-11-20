@@ -17,6 +17,27 @@ import { Logger } from './Logger';
  */
 const STOP_TIMEOUT_MS = 2000;
 
+/**
+ * Pending starts by Biome version.
+ *
+ * Biome shares one daemon per version. Proxies of the same version started
+ * at the same time spawn a daemon each, and the one no client connects to
+ * never exits. Starting them one at a time lets the later ones reuse the
+ * daemon of the first.
+ */
+const startsByVersion = new Map<string, Promise<void>>();
+
+function startInTurn(version: string, task: () => Promise<void>) {
+	const previous = startsByVersion.get(version) ?? Promise.resolve();
+	const next = previous.then(task, task);
+	startsByVersion.set(
+		version,
+		next.catch(() => {}),
+	);
+
+	return next;
+}
+
 export class Session {
 	/**
 	 * The language client for this session.
@@ -94,7 +115,7 @@ export class Session {
 			this.client = client;
 
 			try {
-				await client.start();
+				await startInTurn(this.version, () => client.start());
 				this.logger.info(`▶️ Started ${this.name} (${this.version}).`);
 			} catch (error) {
 				this.client = undefined;
