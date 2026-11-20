@@ -15,6 +15,13 @@ import {
 	getVersion,
 } from './utils';
 
+/**
+ * Folders that never hold a Biome project of their own: dependencies, VCS data
+ * and build output that may carry a copy of package.json (e.g. `.next/standalone`).
+ */
+const PROJECT_SEARCH_EXCLUDE =
+	'**/{node_modules,.git,.next,.nuxt,.output,.svelte-kit,.turbo,.vercel,dist,coverage}/**';
+
 export class Extension {
 	static instance: Extension;
 
@@ -103,7 +110,7 @@ export class Extension {
 		this.logger.time('find all package.json');
 		const projectUris = await workspace.findFiles(
 			'**/package.json',
-			'**/node_modules/**',
+			PROJECT_SEARCH_EXCLUDE,
 		);
 		this.logger.timeEnd('find all package.json');
 		this.logger.info(
