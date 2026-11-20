@@ -22,6 +22,13 @@ import {
 const PROJECT_SEARCH_EXCLUDE =
 	'**/{node_modules,.git,.next,.nuxt,.output,.svelte-kit,.turbo,.vercel,dist,coverage}/**';
 
+const LOCK_FILE_GLOB = '**/{package-lock.json,yarn.lock,pnpm-lock.yaml}';
+
+/**
+ * Package managers write lock files several times per install.
+ */
+const LOCK_FILE_DEBOUNCE_MS = 2000;
+
 export class Extension {
 	static instance: Extension;
 
@@ -37,6 +44,8 @@ export class Extension {
 	private logger = new Logger('Biome Monorepo');
 
 	private sessions: Session[] = [];
+
+	private lockFileTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private statusBar = new StatusBar();
 
@@ -84,7 +93,7 @@ export class Extension {
 			tooltip: 'Loading Biome Monorepo',
 		});
 
-		await this.registerListeners();
+		this.registerListeners();
 		await this.createWorkspaceInstances();
 
 		await Promise.allSettled(this.sessions.map((session) => session.start()));
@@ -99,6 +108,7 @@ export class Extension {
 			subscription.dispose();
 		});
 		this.context.subscriptions.splice(0);
+		clearTimeout(this.lockFileTimer);
 
 		await Promise.allSettled(this.sessions.map((session) => session.stop()));
 
@@ -181,7 +191,19 @@ export class Extension {
 			.filter(Boolean) as Session[];
 	}
 
-	private async registerListeners() {
+	private handleLockFileChange(uri: Uri): void {
+		if (uri.fsPath.includes('node_modules')) {
+			return;
+		}
+
+		clearTimeout(this.lockFileTimer);
+		this.lockFileTimer = setTimeout(() => {
+			this.logger.info(`🔒 ${uri.fsPath} changed, restarting.`);
+			this.restart();
+		}, LOCK_FILE_DEBOUNCE_MS);
+	}
+
+	private registerListeners() {
 		const commandListeners = [
 			commands.registerCommand('biome-monorepo.restart', () => {
 				this.restart();
@@ -227,23 +249,14 @@ export class Extension {
 			}),
 		];
 
-		const lockFileNames = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
-
-		const lockFiles = await workspace.findFiles(
-			`**/{${lockFileNames.join(',')}}`,
-		);
-
-		const lockFileListeners = lockFiles.map((pattern) => {
-			const watcher = workspace.createFileSystemWatcher(pattern.fsPath);
-			watcher.onDidChange(() => this.restart());
-
-			return watcher;
-		});
+		const lockFileWatcher = workspace.createFileSystemWatcher(LOCK_FILE_GLOB);
+		lockFileWatcher.onDidChange((uri) => this.handleLockFileChange(uri));
+		lockFileWatcher.onDidCreate((uri) => this.handleLockFileChange(uri));
 
 		this.context.subscriptions.push(
 			...commandListeners,
 			...workspaceListeners,
-			...lockFileListeners,
+			lockFileWatcher,
 		);
 	}
 }
