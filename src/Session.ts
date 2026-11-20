@@ -12,6 +12,11 @@ import { displayName } from '../package.json';
 import { supportedLanguages } from './constants';
 import { Logger } from './Logger';
 
+/**
+ * How long to wait for the server to acknowledge shutdown.
+ */
+const STOP_TIMEOUT_MS = 2000;
+
 export class Session {
 	/**
 	 * The language client for this session.
@@ -45,13 +50,22 @@ export class Session {
 	 * Stops the LSP session.
 	 */
 	public async stop() {
+		const client = this.client;
+		if (!client) {
+			return;
+		}
+
 		this.logger.debug('Stopping LSP session');
-
-		await this.client?.stop();
-
-		this.logger.debug('LSP session stopped');
-
 		this.client = undefined;
+
+		try {
+			await client.stop(STOP_TIMEOUT_MS);
+			this.logger.debug('LSP session stopped');
+		} catch (error) {
+			// The language client terminates the server process on its own
+			// after a failed shutdown, so there is nothing left to clean up.
+			this.logger.warn(`Failed to stop LSP session: ${String(error)}`);
+		}
 	}
 
 	/**

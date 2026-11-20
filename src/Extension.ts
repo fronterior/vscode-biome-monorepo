@@ -33,6 +33,12 @@ export class Extension {
 
 	private statusBar = new StatusBar();
 
+	/**
+	 * Serializes start, stop and restart so that a restart requested while the
+	 * extension is still starting doesn't leave orphaned sessions behind.
+	 */
+	private lifecycle: Promise<void> = Promise.resolve();
+
 	constructor(public context: ExtensionContext) {
 		if (workspace.workspaceFolders === undefined) {
 			this.logger.error('No workspace folder found.');
@@ -40,7 +46,30 @@ export class Extension {
 		}
 	}
 
-	async start() {
+	start(): Promise<void> {
+		return this.enqueue(() => this.doStart());
+	}
+
+	stop(): Promise<void> {
+		return this.enqueue(() => this.doStop());
+	}
+
+	restart(): Promise<void> {
+		return this.enqueue(async () => {
+			this.logger.info('Restarting extension...');
+			await this.doStop();
+			await this.doStart();
+		});
+	}
+
+	private enqueue(task: () => Promise<void>): Promise<void> {
+		const next = this.lifecycle.then(task, task);
+		this.lifecycle = next.catch(() => {});
+
+		return next;
+	}
+
+	private async doStart() {
 		this.logger.info('Starting extension...');
 		this.statusBar.start();
 		this.statusBar.print({
@@ -51,29 +80,23 @@ export class Extension {
 		await this.registerListeners();
 		await this.createWorkspaceInstances();
 
-		await Promise.all(this.sessions.map((session) => session.start()));
+		await Promise.allSettled(this.sessions.map((session) => session.start()));
 
 		this.statusBar.reset();
 		this.logger.info('🚀 Extension started.');
 	}
 
-	async stop() {
+	private async doStop() {
 		this.logger.info('Stopping extension...');
 		this.context.subscriptions.forEach((subscription) => {
 			subscription.dispose();
 		});
 		this.context.subscriptions.splice(0);
 
-		await Promise.all(this.sessions.map((session) => session.stop()));
+		await Promise.allSettled(this.sessions.map((session) => session.stop()));
 
 		this.statusBar.stop();
 		this.logger.info('🛑 Extension stopped.');
-	}
-
-	async restart() {
-		this.logger.info('Restarting extension...');
-		await this.stop();
-		await this.start();
 	}
 
 	private async createWorkspaceInstances(): Promise<void> {
