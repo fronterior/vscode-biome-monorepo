@@ -17,14 +17,6 @@ export class StatusBar {
 		this.statusBarItem.command = 'biome-monorepo.showCommands';
 	}
 
-	reset() {
-		this.print({
-			text: '$(biome-logo)',
-			tooltip: 'Biome Monorepo',
-			command: 'biome-monorepo.showCommands',
-		});
-	}
-
 	start() {
 		this.print({ text: '$(biome-logo)' });
 		this.statusBarItem.show();

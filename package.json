@@ -49,6 +49,27 @@
 		],
 		"configuration": {
 			"properties": {
+				"biome-monorepo.startMode": {
+					"type": "string",
+					"enum": [
+						"lazy",
+						"eager"
+					],
+					"enumDescriptions": [
+						"Start a project's LSP session when one of its files is opened in an editor tab.",
+						"Start LSP sessions for every detected project on startup."
+					],
+					"default": "lazy",
+					"markdownDescription": "When to start the Biome LSP session of a detected project.",
+					"scope": "window"
+				},
+				"biome-monorepo.idleTimeout": {
+					"type": "number",
+					"default": 10,
+					"minimum": 0,
+					"markdownDescription": "Minutes to keep a project's LSP session running after its last editor tab is closed. `0` keeps it running. Only applies when `#biome-monorepo.startMode#` is `lazy`.",
+					"scope": "window"
+				},
 				"biome-monorepo.workingDirectory": {
 					"type": "array",
 					"items": {

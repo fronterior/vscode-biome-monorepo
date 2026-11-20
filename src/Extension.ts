@@ -1,6 +1,9 @@
 import {
 	commands,
 	type ExtensionContext,
+	type Tab,
+	TabInputText,
+	TabInputTextDiff,
 	Uri,
 	window,
 	workspace,
@@ -29,6 +32,21 @@ const LOCK_FILE_GLOB = '**/{package-lock.json,yarn.lock,pnpm-lock.yaml}';
  */
 const LOCK_FILE_DEBOUNCE_MS = 2000;
 
+type StartMode = 'lazy' | 'eager';
+
+/**
+ * Files shown by an editor tab. For a diff, only the side being edited.
+ */
+const tabUris = (tab: Tab): Uri[] => {
+	if (tab.input instanceof TabInputText) {
+		return [tab.input.uri];
+	}
+	if (tab.input instanceof TabInputTextDiff) {
+		return [tab.input.modified];
+	}
+	return [];
+};
+
 export class Extension {
 	static instance: Extension;
 
@@ -47,6 +65,8 @@ export class Extension {
 
 	private lockFileTimer: ReturnType<typeof setTimeout> | undefined;
 
+	private idleTimers = new Map<Session, ReturnType<typeof setTimeout>>();
+
 	private statusBar = new StatusBar();
 
 	/**
@@ -60,6 +80,23 @@ export class Extension {
 			this.logger.error('No workspace folder found.');
 			return;
 		}
+	}
+
+	private get startMode(): StartMode {
+		return workspace
+			.getConfiguration('biome-monorepo')
+			.get<StartMode>('startMode', 'lazy');
+	}
+
+	/**
+	 * Idle timeout in milliseconds, or 0 to keep sessions running.
+	 */
+	private get idleTimeout(): number {
+		const minutes = workspace
+			.getConfiguration('biome-monorepo')
+			.get<number>('idleTimeout', 10);
+
+		return Math.max(0, minutes) * 60_000;
 	}
 
 	start(): Promise<void> {
@@ -96,10 +133,16 @@ export class Extension {
 		this.registerListeners();
 		await this.createWorkspaceInstances();
 
-		await Promise.allSettled(this.sessions.map((session) => session.start()));
+		if (this.startMode === 'eager') {
+			await Promise.allSettled(this.sessions.map((session) => session.start()));
+		} else {
+			await this.syncSessions();
+		}
 
-		this.statusBar.reset();
-		this.logger.info('🚀 Extension started.');
+		this.updateStatusBar();
+		this.logger.info(
+			`🚀 Extension started (${this.startMode}): ${this.runningCount()} of ${this.sessions.length} session(s) running.`,
+		);
 	}
 
 	private async doStop() {
@@ -109,8 +152,12 @@ export class Extension {
 		});
 		this.context.subscriptions.splice(0);
 		clearTimeout(this.lockFileTimer);
+		this.clearIdleTimers();
 
-		await Promise.allSettled(this.sessions.map((session) => session.stop()));
+		// Detach the sessions first so that nothing can start them again.
+		const sessions = this.sessions;
+		this.sessions = [];
+		await Promise.allSettled(sessions.map((session) => session.dispose()));
 
 		this.statusBar.stop();
 		this.logger.info('🛑 Extension stopped.');
@@ -191,6 +238,130 @@ export class Extension {
 			.filter(Boolean) as Session[];
 	}
 
+	/**
+	 * Finds the session owning the file: the one with the deepest project
+	 * folder that contains it.
+	 */
+	private findSession(uri: Uri): Session | undefined {
+		if (uri.scheme !== 'file') {
+			return undefined;
+		}
+
+		let best: Session | undefined;
+		let bestDepth = -1;
+
+		for (const session of this.sessions) {
+			const depth = session.matchDepth(uri);
+			if (depth > bestDepth) {
+				best = session;
+				bestDepth = depth;
+			}
+		}
+
+		return best;
+	}
+
+	/**
+	 * Sessions that have at least one file open in an editor tab.
+	 *
+	 * Tabs are used instead of `workspace.textDocuments`: other extensions load
+	 * documents in the background, which would start sessions nobody looks at.
+	 */
+	private sessionsWithOpenTabs(): Set<Session> {
+		const result = new Set<Session>();
+
+		for (const group of window.tabGroups.all) {
+			for (const tab of group.tabs) {
+				for (const uri of tabUris(tab)) {
+					const session = this.findSession(uri);
+					if (session) {
+						result.add(session);
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Starts sessions that have open tabs and schedules the others to stop.
+	 */
+	private async syncSessions(): Promise<void> {
+		if (this.startMode === 'eager') {
+			return;
+		}
+
+		const starts: Promise<void>[] = [];
+
+		for (const session of this.sessionsWithOpenTabs()) {
+			this.cancelIdleTimer(session);
+			if (!session.isRunning) {
+				starts.push(session.start());
+			}
+		}
+
+		if (starts.length) {
+			await Promise.allSettled(starts);
+			this.updateStatusBar();
+		}
+
+		// Tabs may have been closed while the sessions were starting.
+		const wanted = this.sessionsWithOpenTabs();
+		for (const session of this.sessions) {
+			if (session.isRunning && !wanted.has(session)) {
+				this.scheduleIdleStop(session);
+			}
+		}
+	}
+
+	private scheduleIdleStop(session: Session): void {
+		const timeout = this.idleTimeout;
+		if (timeout === 0 || this.idleTimers.has(session)) {
+			return;
+		}
+
+		this.idleTimers.set(
+			session,
+			setTimeout(async () => {
+				this.idleTimers.delete(session);
+				if (this.sessionsWithOpenTabs().has(session)) {
+					return;
+				}
+
+				this.logger.info(`💤 ${session.name} is idle.`);
+				await session.stop();
+				this.updateStatusBar();
+			}, timeout),
+		);
+	}
+
+	private cancelIdleTimer(session: Session): void {
+		clearTimeout(this.idleTimers.get(session));
+		this.idleTimers.delete(session);
+	}
+
+	private clearIdleTimers(): void {
+		for (const timer of this.idleTimers.values()) {
+			clearTimeout(timer);
+		}
+		this.idleTimers.clear();
+	}
+
+	private runningCount(): number {
+		return this.sessions.filter((session) => session.isRunning).length;
+	}
+
+	private updateStatusBar(): void {
+		const running = this.sessions.filter((session) => session.isRunning);
+		this.statusBar.print({
+			text: `$(biome-logo) ${running.length}`,
+			tooltip: running.length
+				? `Biome Monorepo: ${running.map((session) => session.name).join(', ')}`
+				: 'Biome Monorepo: no running sessions',
+		});
+	}
+
 	private handleLockFileChange(uri: Uri): void {
 		if (uri.fsPath.includes('node_modules')) {
 			return;
@@ -246,6 +417,17 @@ export class Extension {
 		const workspaceListeners = [
 			workspace.onDidChangeWorkspaceFolders(() => {
 				this.restart();
+			}),
+			window.tabGroups.onDidChangeTabs(() => {
+				this.syncSessions();
+			}),
+			workspace.onDidChangeConfiguration((event) => {
+				if (event.affectsConfiguration('biome-monorepo.startMode')) {
+					this.restart();
+				} else if (event.affectsConfiguration('biome-monorepo.idleTimeout')) {
+					this.clearIdleTimers();
+					this.syncSessions();
+				}
 			}),
 		];
 
