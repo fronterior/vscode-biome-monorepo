@@ -35,6 +35,7 @@ This plugin discovers projects based on package.json files across VSCode workspa
 - The Biome LSP proxy server searches for biome.json files in the workspaceFolders paths provided by VSCode during server initialization.
 - Therefore, if only the monorepo root folder is open in VSCode, it skips searching for biome.json in subdirectories and uses the root configuration instead.
 - To prevent this, this plugin overrides VSCode's workspaceFolders with paths to projects that have Biome installed, ensuring each folder's biome.json is used.
+- By default, a project's LSP session starts when one of its files is opened in an editor tab and stops after its last tab has been closed for a while (see [Settings](#settings)). Large workspaces don't pay for projects nobody is working on.
 
 ## ⚠️ Differences from the Official Plugin
 
@@ -49,12 +50,22 @@ This plugin is currently tailored to specific personal use cases. To clarify ter
 - **Automatic Project Detection**: Automatically detects Biome projects in monorepo workspaces
 - **Per-Project Binary Management**: Each project uses its own Biome version and configuration
 - **Multiple LSP Servers**: Runs separate Language Server Protocol instances for each Biome project
+- **Lazy Sessions**: Starts a project's LSP server only while its files are open
 
 ## Commands
 
 - `Biome Monorepo: Restart` - Restart all Biome LSP sessions
 - `Biome Monorepo: Show Output Channel` - Show the Biome Monorepo output channel
 - `Biome Monorepo: Fix all auto-fixable Problems` - Fix all auto-fixable Problems in focused file
+
+## Settings
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `biome-monorepo.startMode` | `"lazy"` | `"lazy"` starts a project's LSP session when one of its files is opened in an editor tab. `"eager"` starts sessions for every detected project on startup. |
+| `biome-monorepo.idleTimeout` | `10` | Minutes to keep a session running after the last editor tab of its project is closed. `0` keeps it running. Only applies to `"lazy"`. |
+
+The status bar item shows how many sessions are running; hover it to see which ones.
 
 ## ESLint + Prettier Migration Guide
 

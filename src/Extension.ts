@@ -1,6 +1,9 @@
 import {
 	commands,
 	type ExtensionContext,
+	type Tab,
+	TabInputText,
+	TabInputTextDiff,
 	Uri,
 	window,
 	workspace,
@@ -14,6 +17,35 @@ import {
 	findBiomeProjects,
 	getVersion,
 } from './utils';
+
+/**
+ * Folders that never hold a Biome project of their own: dependencies, VCS data
+ * and build output that may carry a copy of package.json (e.g. `.next/standalone`).
+ */
+const PROJECT_SEARCH_EXCLUDE =
+	'**/{node_modules,.git,.next,.nuxt,.output,.svelte-kit,.turbo,.vercel,dist,coverage}/**';
+
+const LOCK_FILE_GLOB = '**/{package-lock.json,yarn.lock,pnpm-lock.yaml}';
+
+/**
+ * Package managers write lock files several times per install.
+ */
+const LOCK_FILE_DEBOUNCE_MS = 2000;
+
+type StartMode = 'lazy' | 'eager';
+
+/**
+ * Files shown by an editor tab. For a diff, only the side being edited.
+ */
+const tabUris = (tab: Tab): Uri[] => {
+	if (tab.input instanceof TabInputText) {
+		return [tab.input.uri];
+	}
+	if (tab.input instanceof TabInputTextDiff) {
+		return [tab.input.modified];
+	}
+	return [];
+};
 
 export class Extension {
 	static instance: Extension;
@@ -31,7 +63,17 @@ export class Extension {
 
 	private sessions: Session[] = [];
 
+	private lockFileTimer: ReturnType<typeof setTimeout> | undefined;
+
+	private idleTimers = new Map<Session, ReturnType<typeof setTimeout>>();
+
 	private statusBar = new StatusBar();
+
+	/**
+	 * Serializes start, stop and restart so that a restart requested while the
+	 * extension is still starting doesn't leave orphaned sessions behind.
+	 */
+	private lifecycle: Promise<void> = Promise.resolve();
 
 	constructor(public context: ExtensionContext) {
 		if (workspace.workspaceFolders === undefined) {
@@ -40,7 +82,47 @@ export class Extension {
 		}
 	}
 
-	async start() {
+	private get startMode(): StartMode {
+		return workspace
+			.getConfiguration('biome-monorepo')
+			.get<StartMode>('startMode', 'lazy');
+	}
+
+	/**
+	 * Idle timeout in milliseconds, or 0 to keep sessions running.
+	 */
+	private get idleTimeout(): number {
+		const minutes = workspace
+			.getConfiguration('biome-monorepo')
+			.get<number>('idleTimeout', 10);
+
+		return Math.max(0, minutes) * 60_000;
+	}
+
+	start(): Promise<void> {
+		return this.enqueue(() => this.doStart());
+	}
+
+	stop(): Promise<void> {
+		return this.enqueue(() => this.doStop());
+	}
+
+	restart(): Promise<void> {
+		return this.enqueue(async () => {
+			this.logger.info('Restarting extension...');
+			await this.doStop();
+			await this.doStart();
+		});
+	}
+
+	private enqueue(task: () => Promise<void>): Promise<void> {
+		const next = this.lifecycle.then(task, task);
+		this.lifecycle = next.catch(() => {});
+
+		return next;
+	}
+
+	private async doStart() {
 		this.logger.info('Starting extension...');
 		this.statusBar.start();
 		this.statusBar.print({
@@ -48,39 +130,44 @@ export class Extension {
 			tooltip: 'Loading Biome Monorepo',
 		});
 
-		await this.registerListeners();
+		this.registerListeners();
 		await this.createWorkspaceInstances();
 
-		await Promise.all(this.sessions.map((session) => session.start()));
+		if (this.startMode === 'eager') {
+			await Promise.allSettled(this.sessions.map((session) => session.start()));
+		} else {
+			await this.syncSessions();
+		}
 
-		this.statusBar.reset();
-		this.logger.info('🚀 Extension started.');
+		this.updateStatusBar();
+		this.logger.info(
+			`🚀 Extension started (${this.startMode}): ${this.runningCount()} of ${this.sessions.length} session(s) running.`,
+		);
 	}
 
-	async stop() {
+	private async doStop() {
 		this.logger.info('Stopping extension...');
 		this.context.subscriptions.forEach((subscription) => {
 			subscription.dispose();
 		});
 		this.context.subscriptions.splice(0);
+		clearTimeout(this.lockFileTimer);
+		this.clearIdleTimers();
 
-		await Promise.all(this.sessions.map((session) => session.stop()));
+		// Detach the sessions first so that nothing can start them again.
+		const sessions = this.sessions;
+		this.sessions = [];
+		await Promise.allSettled(sessions.map((session) => session.dispose()));
 
 		this.statusBar.stop();
 		this.logger.info('🛑 Extension stopped.');
-	}
-
-	async restart() {
-		this.logger.info('Restarting extension...');
-		await this.stop();
-		await this.start();
 	}
 
 	private async createWorkspaceInstances(): Promise<void> {
 		this.logger.time('find all package.json');
 		const projectUris = await workspace.findFiles(
 			'**/package.json',
-			'**/node_modules/**',
+			PROJECT_SEARCH_EXCLUDE,
 		);
 		this.logger.timeEnd('find all package.json');
 		this.logger.info(
@@ -89,12 +176,12 @@ export class Extension {
 
 		this.logger.time('find all biome projects');
 		const biomeProjects = await findBiomeProjects(projectUris);
+		this.logger.timeEnd('find all biome projects');
 		if (!biomeProjects.length) {
 			this.logger.warn('No biome project found.');
 
 			return;
 		}
-		this.logger.timeEnd('find all biome projects');
 		this.logger.info(
 			`🔍 Found ${biomeProjects.length} biome project folder(s).`,
 		);
@@ -103,6 +190,7 @@ export class Extension {
 		// Maps Biome package paths to their associated project paths
 		const biomePackages = findBiomePackagesByProject(biomeProjects);
 		if (!Object.keys(biomePackages).length) {
+			this.logger.timeEnd('find biome binaries');
 			this.logger.warn(
 				'No biome package found in node_modules. Please install it.',
 			);
@@ -151,7 +239,143 @@ export class Extension {
 			.filter(Boolean) as Session[];
 	}
 
-	private async registerListeners() {
+	/**
+	 * Finds the session owning the file: the one with the deepest project
+	 * folder that contains it.
+	 */
+	private findSession(uri: Uri): Session | undefined {
+		if (uri.scheme !== 'file') {
+			return undefined;
+		}
+
+		let best: Session | undefined;
+		let bestDepth = -1;
+
+		for (const session of this.sessions) {
+			const depth = session.matchDepth(uri);
+			if (depth > bestDepth) {
+				best = session;
+				bestDepth = depth;
+			}
+		}
+
+		return best;
+	}
+
+	/**
+	 * Sessions that have at least one file open in an editor tab.
+	 *
+	 * Tabs are used instead of `workspace.textDocuments`: other extensions load
+	 * documents in the background, which would start sessions nobody looks at.
+	 */
+	private sessionsWithOpenTabs(): Set<Session> {
+		const result = new Set<Session>();
+
+		for (const group of window.tabGroups.all) {
+			for (const tab of group.tabs) {
+				for (const uri of tabUris(tab)) {
+					const session = this.findSession(uri);
+					if (session) {
+						result.add(session);
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Starts sessions that have open tabs and schedules the others to stop.
+	 */
+	private async syncSessions(): Promise<void> {
+		if (this.startMode === 'eager') {
+			return;
+		}
+
+		const starts: Promise<void>[] = [];
+
+		for (const session of this.sessionsWithOpenTabs()) {
+			this.cancelIdleTimer(session);
+			if (!session.isRunning) {
+				starts.push(session.start());
+			}
+		}
+
+		if (starts.length) {
+			await Promise.allSettled(starts);
+			this.updateStatusBar();
+		}
+
+		// Tabs may have been closed while the sessions were starting.
+		const wanted = this.sessionsWithOpenTabs();
+		for (const session of this.sessions) {
+			if (session.isRunning && !wanted.has(session)) {
+				this.scheduleIdleStop(session);
+			}
+		}
+	}
+
+	private scheduleIdleStop(session: Session): void {
+		const timeout = this.idleTimeout;
+		if (timeout === 0 || this.idleTimers.has(session)) {
+			return;
+		}
+
+		this.idleTimers.set(
+			session,
+			setTimeout(async () => {
+				this.idleTimers.delete(session);
+				if (this.sessionsWithOpenTabs().has(session)) {
+					return;
+				}
+
+				this.logger.info(`💤 ${session.name} is idle.`);
+				await session.stop();
+				this.updateStatusBar();
+			}, timeout),
+		);
+	}
+
+	private cancelIdleTimer(session: Session): void {
+		clearTimeout(this.idleTimers.get(session));
+		this.idleTimers.delete(session);
+	}
+
+	private clearIdleTimers(): void {
+		for (const timer of this.idleTimers.values()) {
+			clearTimeout(timer);
+		}
+		this.idleTimers.clear();
+	}
+
+	private runningCount(): number {
+		return this.sessions.filter((session) => session.isRunning).length;
+	}
+
+	private updateStatusBar(): void {
+		const running = this.sessions.filter((session) => session.isRunning);
+		this.statusBar.print({
+			text: `$(biome-logo) ${running.length}`,
+			tooltip: running.length
+				? `Biome Monorepo: ${running.map((session) => session.name).join(', ')}`
+				: 'Biome Monorepo: no running sessions',
+		});
+	}
+
+	private handleLockFileChange(uri: Uri): void {
+		if (uri.fsPath.includes('node_modules')) {
+			return;
+		}
+
+		clearTimeout(this.lockFileTimer);
+		this.lockFileTimer = setTimeout(() => {
+			this.logger.info(`🔒 ${uri.fsPath} changed, restarting.`);
+			this.restart();
+		}, LOCK_FILE_DEBOUNCE_MS);
+	}
+
+	private registerListeners() {
 		const commandListeners = [
 			commands.registerCommand('biome-monorepo.restart', () => {
 				this.restart();
@@ -195,25 +419,27 @@ export class Extension {
 			workspace.onDidChangeWorkspaceFolders(() => {
 				this.restart();
 			}),
+			window.tabGroups.onDidChangeTabs(() => {
+				this.syncSessions();
+			}),
+			workspace.onDidChangeConfiguration((event) => {
+				if (event.affectsConfiguration('biome-monorepo.startMode')) {
+					this.restart();
+				} else if (event.affectsConfiguration('biome-monorepo.idleTimeout')) {
+					this.clearIdleTimers();
+					this.syncSessions();
+				}
+			}),
 		];
 
-		const lockFileNames = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
-
-		const lockFiles = await workspace.findFiles(
-			`**/{${lockFileNames.join(',')}}`,
-		);
-
-		const lockFileListeners = lockFiles.map((pattern) => {
-			const watcher = workspace.createFileSystemWatcher(pattern.fsPath);
-			watcher.onDidChange(() => this.restart());
-
-			return watcher;
-		});
+		const lockFileWatcher = workspace.createFileSystemWatcher(LOCK_FILE_GLOB);
+		lockFileWatcher.onDidChange((uri) => this.handleLockFileChange(uri));
+		lockFileWatcher.onDidCreate((uri) => this.handleLockFileChange(uri));
 
 		this.context.subscriptions.push(
 			...commandListeners,
 			...workspaceListeners,
-			...lockFileListeners,
+			lockFileWatcher,
 		);
 	}
 }
