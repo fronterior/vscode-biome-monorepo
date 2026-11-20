@@ -176,12 +176,12 @@ export class Extension {
 
 		this.logger.time('find all biome projects');
 		const biomeProjects = await findBiomeProjects(projectUris);
+		this.logger.timeEnd('find all biome projects');
 		if (!biomeProjects.length) {
 			this.logger.warn('No biome project found.');
 
 			return;
 		}
-		this.logger.timeEnd('find all biome projects');
 		this.logger.info(
 			`🔍 Found ${biomeProjects.length} biome project folder(s).`,
 		);
@@ -190,6 +190,7 @@ export class Extension {
 		// Maps Biome package paths to their associated project paths
 		const biomePackages = findBiomePackagesByProject(biomeProjects);
 		if (!Object.keys(biomePackages).length) {
+			this.logger.timeEnd('find biome binaries');
 			this.logger.warn(
 				'No biome package found in node_modules. Please install it.',
 			);
